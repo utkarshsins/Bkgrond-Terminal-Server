@@ -5,13 +5,13 @@ import java.nio.channels.Selector;
 
 public class ListenerSocket extends Thread {
 
-	private static final String THREAD_NAME = "THREAD_SOCKET";
+	public static final String THREAD_NAME = "THREAD_SOCKET";
 
 	private Selector selector;
 
-	public ListenerSocket() throws IOException {
-		super(new ThreadRunnable());
-		setName(THREAD_NAME);
+	public ListenerSocket(int i) throws IOException {
+		super();
+		setName(THREAD_NAME + "_" + i);
 
 		this.selector = Selector.open();
 	}
@@ -26,11 +26,8 @@ public class ListenerSocket extends Thread {
 		return selector;
 	}
 
-	private static class ThreadRunnable implements Runnable {
-
-		@Override
-		public void run() {
-		}
+	@Override
+	public void run() {
 	}
 
 }

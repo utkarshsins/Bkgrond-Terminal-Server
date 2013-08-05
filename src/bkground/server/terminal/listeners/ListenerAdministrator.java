@@ -29,6 +29,9 @@ public class ListenerAdministrator extends Thread {
 		int optionVal = 0;
 
 		while (true) {
+			System.out.println("#####################################");
+			System.out.println("Terminal Server");
+			System.out.println("#####################################");
 			System.out.println(ADMIN_TITLE);
 			for (String option : ADMIN_OPTIONS) {
 				System.out.println(option);

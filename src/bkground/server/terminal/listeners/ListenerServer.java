@@ -13,20 +13,20 @@ import bkground.server.terminal.ServerInfo;
  */
 public class ListenerServer extends Thread {
 
-	private static final String THREAD_NAME = "THREAD_SERVER";
+	public static final String THREAD_NAME = "THREAD_SERVER";
 
 	private int port;
 
 	private ServerSocketChannel ssc;
 
-	public ListenerServer() throws IOException {
+	public ListenerServer() {
 		super();
 		setName(THREAD_NAME);
 
 		this.port = ServerInfo.SERVER_INFO_DEFAULT_PORT;
 	}
 
-	public ListenerServer(int port) throws IOException {
+	public ListenerServer(int port) {
 		this();
 		this.port = port;
 	}
@@ -60,6 +60,7 @@ public class ListenerServer extends Thread {
 	 * Start the server in its separate thread.
 	 * 
 	 * @throws IOException
+	 *             if listener socket fails to setup
 	 */
 	public synchronized void startServer() throws IOException {
 		ssc = ServerSocketChannel.open();
@@ -67,7 +68,6 @@ public class ListenerServer extends Thread {
 		ssc.socket().bind(new InetSocketAddress(port));
 
 		System.out.println("Server started on port " + port);
-		System.out.println();
 
 		super.start();
 	}
