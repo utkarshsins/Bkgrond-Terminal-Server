@@ -1,5 +1,6 @@
 package bkground.server.terminal;
 
+import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 
 import bkground.server.terminal.listeners.ListenerServer;
@@ -14,14 +15,14 @@ public class ServerInfo {
 
 	public ListenerServer listenerServer;
 
-	public ServerInfo() {
+	public ServerInfo() throws IOException {
 		this.threadCount = Runtime.getRuntime().availableProcessors();
 		this.listenerSockets = new ConcurrentHashMap<Thread, Thread>();
 		this.listenerServer = new ListenerServer();
 	}
 
-	public void init() {
-
+	public void init() throws IOException {
+		listenerServer.startServer();
 	}
 
 	/**

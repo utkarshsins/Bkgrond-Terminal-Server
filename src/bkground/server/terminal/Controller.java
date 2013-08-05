@@ -1,6 +1,6 @@
 package bkground.server.terminal;
 
-import java.io.InputStream;
+import java.io.IOException;
 import java.util.Scanner;
 
 import bkground.server.terminal.listeners.ListenerAdministrator;
@@ -10,22 +10,24 @@ import bkground.server.terminal.listeners.ListenerAdministrator;
  */
 public class Controller implements Runnable {
 
+	private ServerInfo serverInfo;
+
 	/**
 	 * Initiate the server, create required threads and listeners.
 	 * 
 	 * @param scanner
 	 * @return ServerInfo Returns the serverInfo instance that contains
 	 *         initialization information for the terminal server.
+	 * @throws IOException
+	 *             , IllegalStateException
 	 */
-	private ServerInfo initiate(InputStream inputStream)
-			throws IllegalStateException {
+	private ServerInfo initiate(Scanner scanner) throws IllegalStateException,
+			IOException {
 		System.out.println("#####################################");
 		System.out.println("Terminal Server");
 		System.out.println("#####################################");
 
 		ServerInfo serverInfo = new ServerInfo();
-
-		Scanner scanner = new Scanner(inputStream);
 
 		System.out.print("Enter port number to listen on (default "
 				+ ServerInfo.SERVER_INFO_DEFAULT_PORT + ") : ");
@@ -35,26 +37,35 @@ public class Controller implements Runnable {
 			serverInfo.setPort(Integer.parseInt(input));
 		} catch (NumberFormatException e) {
 		} catch (IllegalAccessException e) {
-			scanner.close();
 			throw new IllegalStateException(e);
 		}
 
 		System.out.println();
 
-		scanner.close();
+		serverInfo.init();
+
 		return serverInfo;
 	}
 
 	@Override
 	public void run() {
 
-		try {
-			initiate(System.in);
+		Scanner scanner = new Scanner(System.in);
 
-			ListenerAdministrator admin = new ListenerAdministrator();
+		try {
+
+			serverInfo = initiate(scanner);
+
+			ListenerAdministrator admin = new ListenerAdministrator(scanner,
+					serverInfo);
 			admin.start();
+			admin.join();
+
 		} catch (IllegalStateException e) {
 			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 		}
 
 	}

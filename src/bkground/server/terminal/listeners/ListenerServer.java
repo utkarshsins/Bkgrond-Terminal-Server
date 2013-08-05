@@ -1,5 +1,11 @@
 package bkground.server.terminal.listeners;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.AsynchronousCloseException;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
+
 import bkground.server.terminal.ServerInfo;
 
 /**
@@ -11,14 +17,16 @@ public class ListenerServer extends Thread {
 
 	private int port;
 
-	public ListenerServer() {
-		super(new ThreadRunnable());
+	private ServerSocketChannel ssc;
+
+	public ListenerServer() throws IOException {
+		super();
 		setName(THREAD_NAME);
 
 		this.port = ServerInfo.SERVER_INFO_DEFAULT_PORT;
 	}
 
-	public ListenerServer(int port) {
+	public ListenerServer(int port) throws IOException {
 		this();
 		this.port = port;
 	}
@@ -48,16 +56,70 @@ public class ListenerServer extends Thread {
 		return this;
 	}
 
-	@Override
-	public synchronized void start() {
+	/**
+	 * Start the server in its separate thread.
+	 * 
+	 * @throws IOException
+	 */
+	public synchronized void startServer() throws IOException {
+		ssc = ServerSocketChannel.open();
+		ssc.configureBlocking(true);
+		ssc.socket().bind(new InetSocketAddress(port));
+
+		System.out.println("Server started on port " + port);
+		System.out.println();
+
 		super.start();
 	}
 
-	private static class ThreadRunnable implements Runnable {
-
-		@Override
-		public void run() {
+	/**
+	 * @deprecated call startServer() instead
+	 */
+	@Override
+	public synchronized void start() {
+		try {
+			startServer();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
+	}
+
+	@Override
+	public void run() {
+		while (true) {
+			try {
+
+				SocketChannel socketChannel = ssc.accept();
+
+				System.out.println("Incoming socket from "
+						+ socketChannel.getRemoteAddress());
+
+				// TODO
+				// Handle socketChannel
+
+			} catch (AsynchronousCloseException e) {
+				System.err.println("Asynchronous close on server listener");
+				System.err.println("Stopping Server Listener!!");
+				break;
+			} catch (IOException e) {
+				e.printStackTrace();
+				System.err.println("Stopping Server Listener!!");
+				break;
+			}
+		}
+	}
+
+	@Override
+	public void interrupt() {
+		if (ssc != null) {
+			try {
+				ssc.close();
+			} catch (IOException e) {
+				System.err.println("Error closing listener on interrupt");
+				e.printStackTrace();
+			}
+		}
+		super.interrupt();
 	}
 
 }
