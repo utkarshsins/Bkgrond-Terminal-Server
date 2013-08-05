@@ -1,7 +1,5 @@
 package bkground.server.terminal;
 
-import bkground.server.terminal.listeners.ListenerAdministrator;
-
 public class Skeleton {
 
 	/**
@@ -9,8 +7,8 @@ public class Skeleton {
 	 */
 	public static void main(String[] args) {
 
-		ListenerAdministrator admin = new ListenerAdministrator();
-		admin.run();
+		Controller controller = new Controller();
+		controller.run();
 
 	}
 
