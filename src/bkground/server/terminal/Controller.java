@@ -19,26 +19,18 @@ public class Controller implements Runnable {
 	 * @return ServerInfo Returns the serverInfo instance that contains
 	 *         initialization information for the terminal server.
 	 * @throws IOException
-	 *             , IllegalStateException
+	 *             if listener socket fails to setup
+	 * @throws IllegalStateException
+	 *             should not happen
 	 */
 	private ServerInfo initiate(Scanner scanner) throws IllegalStateException,
 			IOException {
-		System.out.println("#####################################");
-		System.out.println("Terminal Server");
-		System.out.println("#####################################");
+		System.out.println(Defaults.TERMINAL_SERVER_BANNER);
 
 		ServerInfo serverInfo = new ServerInfo();
 
-		System.out.print("Enter port number to listen on (default "
-				+ ServerInfo.SERVER_INFO_DEFAULT_PORT + ") : ");
-		String input = scanner.nextLine();
-
-		try {
-			serverInfo.setPort(Integer.parseInt(input));
-		} catch (NumberFormatException e) {
-		} catch (IllegalAccessException e) {
-			throw new IllegalStateException(e);
-		}
+		initiatePort(scanner, serverInfo);
+		initiateThreadCount(scanner, serverInfo);
 
 		System.out.println();
 
@@ -68,6 +60,36 @@ public class Controller implements Runnable {
 		} catch (InterruptedException e) {
 		}
 
+		scanner.close();
+
 	}
 
+	private void initiatePort(Scanner scanner, ServerInfo serverInfo)
+			throws IllegalStateException {
+		System.out.print("Enter port number to listen on (default "
+				+ ServerInfo.SERVER_INFO_DEFAULT_PORT + ") : ");
+		String input = scanner.nextLine();
+
+		try {
+			serverInfo.setPort(Integer.parseInt(input));
+		} catch (NumberFormatException e) {
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private void initiateThreadCount(Scanner scanner, ServerInfo serverInfo)
+			throws IllegalStateException {
+		System.out
+				.println("Enter number of threads to handle connections (default "
+						+ Defaults.getDefaultThreadCount() + ") : ");
+		String input = scanner.nextLine();
+
+		try {
+			serverInfo.setThreadCount(Integer.parseInt(input));
+		} catch (NumberFormatException e) {
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+	}
 }

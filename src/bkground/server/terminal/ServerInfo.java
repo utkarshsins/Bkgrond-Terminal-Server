@@ -24,7 +24,7 @@ public class ServerInfo {
 
 		if (listenerSockets.size() == 0) {
 			try {
-				setThreadCount(Runtime.getRuntime().availableProcessors());
+				setThreadCount(Defaults.getDefaultThreadCount());
 			} catch (IllegalAccessException e) {
 				System.out.println("Should not have happened. Halting.");
 				e.printStackTrace();

@@ -3,6 +3,7 @@ package bkground.server.terminal.listeners;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
+import bkground.server.terminal.Defaults;
 import bkground.server.terminal.ServerInfo;
 
 public class ListenerAdministrator extends Thread {
@@ -26,30 +27,40 @@ public class ListenerAdministrator extends Thread {
 	@Override
 	public void run() {
 
-		int optionVal = 0;
+		int optionVal = 1;
 
 		while (true) {
-			System.out.println("#####################################");
-			System.out.println("Terminal Server");
-			System.out.println("#####################################");
-			System.out.println(ADMIN_TITLE);
-			for (String option : ADMIN_OPTIONS) {
-				System.out.println(option);
-			}
+
+			printMenu();
 
 			try {
 				optionVal = scanner.nextInt();
 			} catch (NoSuchElementException | IllegalStateException e) {
-				e.printStackTrace();
+				System.err.println("Invalid input.");
 			}
 
 			if (optionVal == 1) {
 				System.err.println("Shutting down server.");
+
 				serverInfo.listenerServer.interrupt();
+				for (ListenerSocket listenerSocket : serverInfo.listenerSockets
+						.values()) {
+					listenerSocket.interrupt();
+				}
+
 				break;
 			}
+
 		}
 
+	}
+
+	private void printMenu() {
+		System.out.println(Defaults.TERMINAL_SERVER_BANNER);
+		System.out.println(ADMIN_TITLE);
+		for (String option : ADMIN_OPTIONS) {
+			System.out.println(option);
+		}
 	}
 
 }

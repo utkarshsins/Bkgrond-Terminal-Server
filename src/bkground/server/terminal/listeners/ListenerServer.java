@@ -78,9 +78,11 @@ public class ListenerServer extends Thread {
 	@Override
 	public synchronized void start() {
 		try {
+			System.err.println("Warning : Using a deprecated function.");
 			startServer();
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 
@@ -99,14 +101,13 @@ public class ListenerServer extends Thread {
 
 			} catch (AsynchronousCloseException e) {
 				System.err.println("Asynchronous close on server listener");
-				System.err.println("Stopping Server Listener!!");
 				break;
 			} catch (IOException e) {
 				e.printStackTrace();
-				System.err.println("Stopping Server Listener!!");
 				break;
 			}
 		}
+		System.err.println("Stopping Server Listener!!");
 	}
 
 	@Override
