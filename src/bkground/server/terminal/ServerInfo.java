@@ -10,17 +10,16 @@ public class ServerInfo {
 
 	public static final int SERVER_INFO_DEFAULT_PORT = 4040;
 
-	public ConcurrentHashMap<ListenerSocket, ListenerSocket> listenerSockets;
+	public ConcurrentHashMap<Integer, ListenerSocket> listenerSockets;
 
 	public ListenerServer listenerServer;
 
 	public ServerInfo() {
-		this.listenerSockets = new ConcurrentHashMap<ListenerSocket, ListenerSocket>();
-		this.listenerServer = new ListenerServer();
+		this.listenerSockets = new ConcurrentHashMap<Integer, ListenerSocket>();
+		this.listenerServer = new ListenerServer(listenerSockets);
 	}
 
 	public void init() throws IOException {
-		listenerServer.startServer();
 
 		if (listenerSockets.size() == 0) {
 			try {
@@ -35,6 +34,9 @@ public class ServerInfo {
 		for (ListenerSocket listenerSocket : listenerSockets.values()) {
 			listenerSocket.start();
 		}
+
+		// Must start after listenerSockets
+		listenerServer.startServer();
 	}
 
 	/**
@@ -66,7 +68,7 @@ public class ServerInfo {
 		for (int i = 0; i < count; i++) {
 			try {
 				ListenerSocket listenerSocket = new ListenerSocket(i);
-				listenerSockets.put(listenerSocket, listenerSocket);
+				listenerSockets.put(i, listenerSocket);
 			} catch (IOException e) {
 				count--;
 			}

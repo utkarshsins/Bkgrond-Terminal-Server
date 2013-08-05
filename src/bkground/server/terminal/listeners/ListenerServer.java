@@ -5,6 +5,7 @@ import java.net.InetSocketAddress;
 import java.nio.channels.AsynchronousCloseException;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.ConcurrentHashMap;
 
 import bkground.server.terminal.ServerInfo;
 
@@ -16,19 +17,25 @@ public class ListenerServer extends Thread {
 	public static final String THREAD_NAME = "THREAD_SERVER";
 
 	private int port;
+	private int listenerIterator;
 
 	private ServerSocketChannel ssc;
+
+	private ConcurrentHashMap<Integer, ListenerSocket> listenerSockets;
 
 	public ListenerServer() {
 		super();
 		setName(THREAD_NAME);
 
 		this.port = ServerInfo.SERVER_INFO_DEFAULT_PORT;
+		this.listenerIterator = 0;
 	}
 
-	public ListenerServer(int port) {
+	public ListenerServer(
+			ConcurrentHashMap<Integer, ListenerSocket> listenerSockets) {
 		this();
-		this.port = port;
+
+		this.listenerSockets = listenerSockets;
 	}
 
 	/**
@@ -96,8 +103,20 @@ public class ListenerServer extends Thread {
 				System.out.println("Incoming socket from "
 						+ socketChannel.getRemoteAddress());
 
-				// TODO
-				// Handle socketChannel
+				if (listenerSockets.values().size() != 0) {
+
+					listenerIterator = (++listenerIterator)
+							% listenerSockets.values().size();
+
+					listenerSockets.get(listenerIterator).addSocketChannel(
+							socketChannel);
+
+				} else {
+
+					System.err.println("No socket listener. Cleaning.");
+					socketChannel.close();
+
+				}
 
 			} catch (AsynchronousCloseException e) {
 				System.err.println("Asynchronous close on server listener");
