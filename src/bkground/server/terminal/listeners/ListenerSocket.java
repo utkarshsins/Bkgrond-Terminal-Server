@@ -5,7 +5,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
 
 public class ListenerSocket extends Thread {
 
@@ -13,14 +12,11 @@ public class ListenerSocket extends Thread {
 
 	private Selector selector;
 
-	private HashMap<SelectionKey, SocketChannel> keyChannelMap;
-
 	public ListenerSocket(int i) throws IOException {
 		super();
 		setName(THREAD_NAME + "_" + i);
 
 		this.selector = Selector.open();
-		this.keyChannelMap = new HashMap<SelectionKey, SocketChannel>();
 	}
 
 	/**
@@ -62,9 +58,7 @@ public class ListenerSocket extends Thread {
 			throws ClosedChannelException, IOException {
 
 		socketChannel.configureBlocking(false);
-		SelectionKey key = socketChannel.register(selector,
-				SelectionKey.OP_READ);
-		keyChannelMap.put(key, socketChannel);
+		socketChannel.register(selector, SelectionKey.OP_READ);
 
 		System.out.println("Registered socket to " + getName());
 
