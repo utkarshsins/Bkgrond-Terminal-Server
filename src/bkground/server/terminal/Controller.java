@@ -82,7 +82,7 @@ public class Controller implements Runnable {
 			throws IllegalStateException {
 		System.out
 				.println("Enter number of threads to handle connections (default "
-						+ Defaults.getDefaultThreadCount() + ") : ");
+						+ Defaults.getDefaultListenerThreadCount() + ") : ");
 		String input = scanner.nextLine();
 
 		try {

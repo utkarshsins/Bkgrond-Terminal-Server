@@ -113,7 +113,7 @@ public class ListenerServer extends Thread {
 
 				} else {
 
-					System.err.println("No socket listener. Cleaning.");
+					System.err.println("No socket listener thread. Cleaning.");
 					socketChannel.close();
 
 				}

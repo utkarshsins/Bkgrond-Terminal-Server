@@ -2,6 +2,8 @@ package bkground.server.terminal;
 
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import bkground.server.terminal.listeners.ListenerServer;
 import bkground.server.terminal.listeners.ListenerSocket;
@@ -10,20 +12,23 @@ public class ServerInfo {
 
 	public static final int SERVER_INFO_DEFAULT_PORT = 4040;
 
-	public ConcurrentHashMap<Integer, ListenerSocket> listenerSockets;
+	public ConcurrentHashMap<Integer, ListenerSocket> listenerSocketMap;
 
 	public ListenerServer listenerServer;
+	
+	public ExecutorService socketProcessorPool;
 
 	public ServerInfo() {
-		this.listenerSockets = new ConcurrentHashMap<Integer, ListenerSocket>();
-		this.listenerServer = new ListenerServer(listenerSockets);
+		this.listenerSocketMap = new ConcurrentHashMap<Integer, ListenerSocket>();
+		this.listenerServer = new ListenerServer(listenerSocketMap);
+		this.socketProcessorPool = Executors.newFixedThreadPool(Defaults.getDefaultProcessorThreadCount());
 	}
 
 	public void init() throws IOException {
 
-		if (listenerSockets.size() == 0) {
+		if (listenerSocketMap.size() == 0) {
 			try {
-				setThreadCount(Defaults.getDefaultThreadCount());
+				setThreadCount(Defaults.getDefaultListenerThreadCount());
 			} catch (IllegalAccessException e) {
 				System.out.println("Should not have happened. Halting.");
 				e.printStackTrace();
@@ -31,7 +36,7 @@ public class ServerInfo {
 			}
 		}
 
-		for (ListenerSocket listenerSocket : listenerSockets.values()) {
+		for (ListenerSocket listenerSocket : listenerSocketMap.values()) {
 			listenerSocket.start();
 		}
 
@@ -61,14 +66,14 @@ public class ServerInfo {
 	 *             If thread count has been set once
 	 */
 	public ServerInfo setThreadCount(int count) throws IllegalAccessException {
-		if (listenerSockets.size() > 0) {
+		if (listenerSocketMap.size() > 0) {
 			throw new IllegalAccessException();
 		}
 
 		for (int i = 0; i < count; i++) {
 			try {
-				ListenerSocket listenerSocket = new ListenerSocket(i);
-				listenerSockets.put(i, listenerSocket);
+				ListenerSocket listenerSocket = new ListenerSocket(this, i);
+				listenerSocketMap.put(i, listenerSocket);
 			} catch (IOException e) {
 				count--;
 			}

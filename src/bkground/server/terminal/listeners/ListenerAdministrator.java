@@ -43,7 +43,7 @@ public class ListenerAdministrator extends Thread {
 				System.err.println("Shutting down server.");
 
 				serverInfo.listenerServer.interrupt();
-				for (ListenerSocket listenerSocket : serverInfo.listenerSockets
+				for (ListenerSocket listenerSocket : serverInfo.listenerSocketMap
 						.values()) {
 					listenerSocket.interrupt();
 				}
