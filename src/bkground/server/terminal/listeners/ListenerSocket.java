@@ -1,12 +1,13 @@
 package bkground.server.terminal.listeners;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -27,6 +28,9 @@ public class ListenerSocket extends Thread {
 	private Selector selector;
 
 	private ServerInfo serverInfo;
+
+	private List<SocketChannel> pendingSocketsAdd;
+	private List<SelectionKey> pendingSocketsRemove;
 
 	/**
 	 * TODO Use this hash map to store information about socket channels that
@@ -53,6 +57,15 @@ public class ListenerSocket extends Thread {
 		this.serverInfo = serverInfo;
 
 		this.selector = Selector.open();
+
+		// TODO
+		// Check if this actually makes it thread safe. Elements are added to
+		// pending sockets from another thread and removed from the current
+		// thread.
+		this.pendingSocketsAdd = Collections
+				.synchronizedList(new ArrayList<SocketChannel>());
+		this.pendingSocketsRemove = Collections
+				.synchronizedList(new ArrayList<SelectionKey>());
 	}
 
 	/**
@@ -74,6 +87,23 @@ public class ListenerSocket extends Thread {
 	public void run() {
 		int selected = 0;
 		while (selector.isOpen()) {
+
+			// Register newly created sockets with the current thread's listener
+			while (pendingSocketsAdd.size() > 0) {
+
+				try {
+					addSocketChannel(pendingSocketsAdd.remove(0));
+				} catch (ClosedChannelException e) {
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+			}
+
+			// Remove sockets whose connections are closed (EOS recieved)
+			while (pendingSocketsRemove.size() > 0)
+				removeSocketChannel(pendingSocketsRemove.remove(0));
+
 			try {
 
 				selected = selector.select();
@@ -85,18 +115,21 @@ public class ListenerSocket extends Thread {
 				List<Future<Boolean>> processedFutures = new ArrayList<Future<Boolean>>();
 
 				for (SelectionKey readyKey : readyKeys) {
-					SelectableChannel channel = readyKey.channel();
-					processedFutures.add(serverInfo.socketProcessorPool
-							.submit(new RegisterReadTask(channel)));
+
+					if (readyKey.isReadable()) {
+						processedFutures.add(serverInfo.socketProcessorPool
+								.submit(new RegisterReadTask(readyKey)));
+					} else {
+						System.err.println("Not readable. Something else. "
+								+ "Handle this case.");
+					}
 
 				}
 
-				int counter = 0;
 				for (Future<Boolean> future : processedFutures) {
 					try {
-						boolean futureResult = future.get();
-						System.out.println("Successful data recovery from "
-								+ counter + " channel");
+						// boolean futureResult = future.get();
+						future.get();
 					} catch (InterruptedException | ExecutionException e) {
 						System.err.println("Something went wrong when trying "
 								+ "to wait for registering an incoming "
@@ -105,6 +138,10 @@ public class ListenerSocket extends Thread {
 						e.printStackTrace();
 					}
 				}
+
+				readyKeys.clear();
+
+				System.out.println();
 
 			} catch (IOException e) {
 				System.err.println("select() failed for " + getName());
@@ -134,7 +171,7 @@ public class ListenerSocket extends Thread {
 	 * @throws ClosedChannelException
 	 * @throws IOException
 	 */
-	public synchronized boolean addSocketChannel(SocketChannel socketChannel)
+	private boolean addSocketChannel(SocketChannel socketChannel)
 			throws ClosedChannelException, IOException {
 
 		socketChannel.configureBlocking(false);
@@ -143,14 +180,44 @@ public class ListenerSocket extends Thread {
 		System.out.println("Registered socket to " + getName());
 
 		return true;
+	}
 
+	/**
+	 * This function will unregister a closed socket request registered with
+	 * this data-listener thread.
+	 * 
+	 * @param
+	 * @return boolean true if removal was successful
+	 */
+	private boolean removeSocketChannel(SelectionKey key) {
+
+		key.cancel();
+		serverInfo.socketListenersMap.remove(key.channel());
+
+		return true;
+	}
+
+	public synchronized boolean enqueSocketRemoval(SelectionKey key) {
+
+		pendingSocketsRemove.add(key);
+		selector.wakeup();
+
+		return true;
+	}
+
+	public synchronized boolean enqueSocketChannel(SocketChannel socketChannel) {
+
+		pendingSocketsAdd.add(socketChannel);
+		selector.wakeup();
+
+		return true;
 	}
 
 	private class RegisterReadTask implements Callable<Boolean> {
-		SelectableChannel channel;
+		SelectionKey key;
 
-		public RegisterReadTask(SelectableChannel channel) {
-			this.channel = channel;
+		public RegisterReadTask(SelectionKey readyKey) {
+			this.key = readyKey;
 		}
 
 		@Override
@@ -158,11 +225,37 @@ public class ListenerSocket extends Thread {
 
 			// TODO
 			// Extract data from socket into a data structure here and return
-			// true. Socket should be reset to not contain any available data
-			// otherwise select will go into an infinite loop I think. Whatever
-			// you do, reference the NIO APIs properly. They will explain stuff.
-			System.out.println("Supposed to extract data from channel "
-					+ channel + " here.");
+			// true.
+
+			SocketChannel channel = (SocketChannel) key.channel();
+
+			// Keep one buffer in each thread always ready. Don't create a new
+			// buffer for every event.
+			ExtractorThread thread = (ExtractorThread) Thread.currentThread();
+			ByteBuffer buffer = thread.buffer;
+			int bytesRead = channel.read(buffer);
+			while (bytesRead > 0) {
+
+				System.out.print("Read : ");
+				buffer.flip();
+
+				while (buffer.hasRemaining()) {
+					System.out.print((char) buffer.get());
+				}
+
+				buffer.clear();
+				bytesRead = channel.read(buffer);
+			}
+			System.out.println();
+
+			if (bytesRead == -1) {
+
+				System.out.println("Socket closed. EOS. "
+						+ "Unregister selector and remove associated data.");
+
+				enqueSocketRemoval(key);
+
+			}
 
 			return true;
 		}

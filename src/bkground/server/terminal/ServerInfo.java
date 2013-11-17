@@ -1,10 +1,12 @@
 package bkground.server.terminal;
 
 import java.io.IOException;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import bkground.server.terminal.listeners.ExtractorThreadFactory;
 import bkground.server.terminal.listeners.ListenerServer;
 import bkground.server.terminal.listeners.ListenerSocket;
 
@@ -13,15 +15,20 @@ public class ServerInfo {
 	public static final int SERVER_INFO_DEFAULT_PORT = 4040;
 
 	public ConcurrentHashMap<Integer, ListenerSocket> listenerSocketMap;
+	
+	public ConcurrentHashMap<SocketChannel, ListenerSocket> socketListenersMap; 
 
 	public ListenerServer listenerServer;
-	
+
 	public ExecutorService socketProcessorPool;
 
 	public ServerInfo() {
 		this.listenerSocketMap = new ConcurrentHashMap<Integer, ListenerSocket>();
-		this.listenerServer = new ListenerServer(listenerSocketMap);
-		this.socketProcessorPool = Executors.newFixedThreadPool(Defaults.getDefaultProcessorThreadCount());
+		this.socketListenersMap = new ConcurrentHashMap<SocketChannel, ListenerSocket>();
+		this.listenerServer = new ListenerServer(listenerSocketMap, this);
+		this.socketProcessorPool = Executors.newFixedThreadPool(
+				Defaults.getDefaultProcessorThreadCount(),
+				new ExtractorThreadFactory());
 	}
 
 	public void init() throws IOException {

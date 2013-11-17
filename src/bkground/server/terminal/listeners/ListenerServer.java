@@ -21,6 +21,8 @@ public class ListenerServer extends Thread {
 
 	private ServerSocketChannel ssc;
 
+	private ServerInfo serverInfo;
+
 	private ConcurrentHashMap<Integer, ListenerSocket> listenerSockets;
 
 	public ListenerServer() {
@@ -28,13 +30,15 @@ public class ListenerServer extends Thread {
 		setName(THREAD_NAME);
 
 		this.port = ServerInfo.SERVER_INFO_DEFAULT_PORT;
-		this.listenerIterator = 0;
+		this.listenerIterator = -1;
 	}
 
 	public ListenerServer(
-			ConcurrentHashMap<Integer, ListenerSocket> listenerSockets) {
+			ConcurrentHashMap<Integer, ListenerSocket> listenerSockets,
+			ServerInfo serverInfo) {
 		this();
 
+		this.serverInfo = serverInfo;
 		this.listenerSockets = listenerSockets;
 	}
 
@@ -107,9 +111,10 @@ public class ListenerServer extends Thread {
 
 					listenerIterator = (++listenerIterator)
 							% listenerSockets.values().size();
-
-					listenerSockets.get(listenerIterator).addSocketChannel(
+					listenerSockets.get(listenerIterator).enqueSocketChannel(
 							socketChannel);
+					serverInfo.socketListenersMap.put(socketChannel,
+							listenerSockets.get(listenerIterator));
 
 				} else {
 
