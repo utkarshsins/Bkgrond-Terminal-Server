@@ -6,6 +6,9 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import com.fasterxml.aalto.AsyncXMLInputFactory;
+import com.fasterxml.aalto.stax.InputFactoryImpl;
+
 import bkground.server.terminal.listeners.ExtractorThreadFactory;
 import bkground.server.terminal.listeners.ListenerServer;
 import bkground.server.terminal.listeners.ListenerSocket;
@@ -15,20 +18,22 @@ public class ServerInfo {
 	public static final int SERVER_INFO_DEFAULT_PORT = 4040;
 
 	public ConcurrentHashMap<Integer, ListenerSocket> listenerSocketMap;
-	
-	public ConcurrentHashMap<SocketChannel, ListenerSocket> socketListenersMap; 
+
+	public ConcurrentHashMap<SocketChannel, ListenerSocket> socketListenersMap;
 
 	public ListenerServer listenerServer;
 
-	public ExecutorService socketProcessorPool;
+	public ExecutorService streamProcessorPool;
+
+	public AsyncXMLInputFactory xmlInputFactory;
 
 	public ServerInfo() {
 		this.listenerSocketMap = new ConcurrentHashMap<Integer, ListenerSocket>();
 		this.socketListenersMap = new ConcurrentHashMap<SocketChannel, ListenerSocket>();
 		this.listenerServer = new ListenerServer(listenerSocketMap, this);
-		this.socketProcessorPool = Executors.newFixedThreadPool(
-				Defaults.getDefaultProcessorThreadCount(),
+		this.streamProcessorPool = Executors.newFixedThreadPool(5,
 				new ExtractorThreadFactory());
+		this.xmlInputFactory = new InputFactoryImpl();
 	}
 
 	public void init() throws IOException {

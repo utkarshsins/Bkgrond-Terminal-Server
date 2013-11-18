@@ -1,16 +1,20 @@
 package bkground.server.terminal.listeners;
 
-import java.nio.ByteBuffer;
+import bkground.server.terminal.Defaults;
+import bkground.server.terminal.jdbc_connect;
 
 public class ExtractorThread extends Thread {
 
-	public ByteBuffer buffer;
+	public jdbc_connect mysqlConnector;
 
 	public ExtractorThread(Runnable arg0) {
 
 		super(arg0);
 
-		buffer = ByteBuffer.allocate(1024);
+		mysqlConnector = new jdbc_connect(Defaults.getDefaultDatabaseAddress(),
+				Defaults.getDefaultDatabaseName(),
+				Defaults.getDefaultDatabaseUsername(),
+				Defaults.getDefaultDatabasePassword());
 
 	}
 

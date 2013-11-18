@@ -14,7 +14,13 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.events.StartElement;
+import javax.xml.stream.events.XMLEvent;
+
 import bkground.server.terminal.ServerInfo;
+import bkground.server.terminal.SocketInfo;
+import bkground.server.terminal.StreamProcessTask;
 
 public class ListenerSocket extends Thread {
 
@@ -31,6 +37,8 @@ public class ListenerSocket extends Thread {
 
 	private List<SocketChannel> pendingSocketsAdd;
 	private List<SelectionKey> pendingSocketsRemove;
+
+	private ByteBuffer buffer;
 
 	/**
 	 * TODO Use this hash map to store information about socket channels that
@@ -66,6 +74,8 @@ public class ListenerSocket extends Thread {
 				.synchronizedList(new ArrayList<SocketChannel>());
 		this.pendingSocketsRemove = Collections
 				.synchronizedList(new ArrayList<SelectionKey>());
+
+		buffer = ByteBuffer.allocate(1024);
 	}
 
 	/**
@@ -102,7 +112,11 @@ public class ListenerSocket extends Thread {
 
 			// Remove sockets whose connections are closed (EOS recieved)
 			while (pendingSocketsRemove.size() > 0)
-				removeSocketChannel(pendingSocketsRemove.remove(0));
+				try {
+					removeSocketChannel(pendingSocketsRemove.remove(0));
+				} catch (IOException e1) {
+					e1.printStackTrace();
+				}
 
 			try {
 
@@ -117,8 +131,7 @@ public class ListenerSocket extends Thread {
 				for (SelectionKey readyKey : readyKeys) {
 
 					if (readyKey.isReadable()) {
-						processedFutures.add(serverInfo.socketProcessorPool
-								.submit(new RegisterReadTask(readyKey)));
+						processSelectionKey(readyKey);
 					} else {
 						System.err.println("Not readable. Something else. "
 								+ "Handle this case.");
@@ -175,7 +188,11 @@ public class ListenerSocket extends Thread {
 			throws ClosedChannelException, IOException {
 
 		socketChannel.configureBlocking(false);
-		socketChannel.register(selector, SelectionKey.OP_READ);
+
+		SocketInfo socketInfo = new SocketInfo(serverInfo);
+		socketInfo.readKey = (SelectionKey) socketChannel.register(selector,
+				SelectionKey.OP_READ);
+		socketInfo.readKey.attach(socketInfo);
 
 		System.out.println("Registered socket to " + getName());
 
@@ -188,11 +205,13 @@ public class ListenerSocket extends Thread {
 	 * 
 	 * @param
 	 * @return boolean true if removal was successful
+	 * @throws IOException
 	 */
-	private boolean removeSocketChannel(SelectionKey key) {
+	private boolean removeSocketChannel(SelectionKey key) throws IOException {
 
 		key.cancel();
 		serverInfo.socketListenersMap.remove(key.channel());
+		key.channel().close();
 
 		return true;
 	}
@@ -213,51 +232,77 @@ public class ListenerSocket extends Thread {
 		return true;
 	}
 
-	private class RegisterReadTask implements Callable<Boolean> {
-		SelectionKey key;
+	/**
+	 * This process is not thread pooled right now because incoming traffic is
+	 * assumed to be handleable which is not an unfair assumption. There is no
+	 * chat server to be implemented right now. Even if there was, check and be
+	 * sure that you need to thread pool this module to gain some performance
+	 * improvements. Otherwise keep it simple. Don't create four thread pools,
+	 * if your work can be done using three only.
+	 * 
+	 * @param SelectionKey
+	 *            key
+	 */
+	private void processSelectionKey(SelectionKey key) {
 
-		public RegisterReadTask(SelectionKey readyKey) {
-			this.key = readyKey;
+		// TODO
+		// Extract data from socket into a data structure here and return
+		// true.
+
+		SocketChannel channel = (SocketChannel) key.channel();
+		SocketInfo socketInfo = (SocketInfo) key.attachment();
+		// TerminalSocketStream stream = socketInfo.socketStream;
+
+		// Don't create a new buffer for every event.
+		buffer.clear();
+		int bytesRead = readBytesFromChannel(buffer, channel);
+
+		while (bytesRead > 0) {
+
+			buffer.flip();
+
+			try {
+				socketInfo.xmlFeeder.feedInput(buffer.array(),
+						buffer.arrayOffset(), buffer.remaining());
+				// buffer.position(newPosition)
+			} catch (XMLStreamException e) {
+				e.printStackTrace();
+			}
+
+			buffer.clear();
+
+			bytesRead = readBytesFromChannel(buffer, channel);
+
+			serverInfo.streamProcessorPool.submit(new StreamProcessTask(key));
+
+		}
+		System.out.println();
+
+		if (bytesRead == -1) {
+
+			System.out.println("Socket closed. EOS. "
+					+ "Unregister selector and remove associated data.");
+
+			enqueSocketRemoval(key);
+
 		}
 
-		@Override
-		public Boolean call() throws Exception {
+	}
 
-			// TODO
-			// Extract data from socket into a data structure here and return
-			// true.
+	private int readBytesFromChannel(ByteBuffer buffer, SocketChannel channel) {
 
-			SocketChannel channel = (SocketChannel) key.channel();
+		try {
 
-			// Keep one buffer in each thread always ready. Don't create a new
-			// buffer for every event.
-			ExtractorThread thread = (ExtractorThread) Thread.currentThread();
-			ByteBuffer buffer = thread.buffer;
-			int bytesRead = channel.read(buffer);
-			while (bytesRead > 0) {
+			return channel.read(buffer);
 
-				System.out.print("Read : ");
-				buffer.flip();
+		} catch (IOException e) {
 
-				while (buffer.hasRemaining()) {
-					System.out.print((char) buffer.get());
-				}
+			System.err.println("IOException when reading from channel. "
+					+ "Closing socket.");
+			e.printStackTrace();
 
-				buffer.clear();
-				bytesRead = channel.read(buffer);
-			}
-			System.out.println();
+			return -1;
 
-			if (bytesRead == -1) {
-
-				System.out.println("Socket closed. EOS. "
-						+ "Unregister selector and remove associated data.");
-
-				enqueSocketRemoval(key);
-
-			}
-
-			return true;
 		}
 
 	}

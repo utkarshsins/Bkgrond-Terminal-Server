@@ -14,4 +14,19 @@ public class Defaults {
 		return Runtime.getRuntime().availableProcessors();
 	}
 
+	public static String getDefaultDatabaseAddress() {
+		return "192.168.43.5";
+	}
+	
+	public static String getDefaultDatabaseName() {
+		return "bkground_database";
+	}
+	
+	public static String getDefaultDatabaseUsername() {
+		return "admin";
+	}
+	
+	public static String getDefaultDatabasePassword() {
+		return "admin";
+	}
 }
