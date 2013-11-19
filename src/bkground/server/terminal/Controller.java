@@ -31,6 +31,7 @@ public class Controller implements Runnable {
 
 		initiatePort(scanner, serverInfo);
 		initiateThreadCount(scanner, serverInfo);
+		initiateID(scanner, serverInfo);
 
 		System.out.println();
 
@@ -83,6 +84,20 @@ public class Controller implements Runnable {
 		System.out
 				.println("Enter number of threads to handle connections (default "
 						+ Defaults.getDefaultListenerThreadCount() + ") : ");
+		String input = scanner.nextLine();
+
+		try {
+			serverInfo.setThreadCount(Integer.parseInt(input));
+		} catch (NumberFormatException e) {
+		} catch (IllegalAccessException e) {
+			throw new IllegalStateException(e);
+		}
+	}
+
+	private void initiateID(Scanner scanner, ServerInfo serverInfo) {
+		System.out
+				.println("Enter terminal server id (default "
+						+ Defaults.getDefaultTerminalTerminalServerID() + ") : ");
 		String input = scanner.nextLine();
 
 		try {

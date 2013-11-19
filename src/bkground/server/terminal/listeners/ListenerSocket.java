@@ -10,13 +10,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.events.StartElement;
-import javax.xml.stream.events.XMLEvent;
 
 import bkground.server.terminal.ServerInfo;
 import bkground.server.terminal.SocketInfo;
@@ -121,7 +118,7 @@ public class ListenerSocket extends Thread {
 			try {
 
 				selected = selector.select();
-				System.out.println("Selected " + selected);
+				// System.out.println("Selected " + selected);
 
 				// TODO
 				// Code to process data from selector's selected keys

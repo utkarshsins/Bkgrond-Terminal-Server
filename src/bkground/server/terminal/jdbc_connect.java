@@ -6,6 +6,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 
+import bkground.server.terminal.SocketInfo.User;
+
 import com.mysql.jdbc.Statement;
 
 public class jdbc_connect {
@@ -63,13 +65,12 @@ public class jdbc_connect {
 	}
 
 	/* Inserts record in terminalconnections database */
-	void insert_record_terminalconnections_db(int connID, int userID,
-			int terminalID) {
+	private void insert_record_terminalconnections_db(int userID, int terminalID) {
 		try {
 			stmt = (Statement) connection.createStatement();
 
-			String sql = "INSERT INTO terminalconnections_db " + "VALUES ("
-					+ connID + "," + userID + "," + terminalID + ")";
+			String sql = "INSERT INTO terminalconnections_db (userID, terminalID) "
+					+ "VALUES (" + userID + "," + terminalID + ")";
 			stmt.executeUpdate(sql);
 			System.out.println("Inserted records into the table...");
 
@@ -204,6 +205,35 @@ public class jdbc_connect {
 				System.out.print(", USER_NAME: " + name);
 			}
 			rs.close();
+		} catch (SQLException se) {
+			// Handle errors for JDBC
+			se.printStackTrace();
+		}
+	}
+
+	/* Gets users record for given username and password */
+	void authorize_user_db(User user, String username, String password) {
+		try {
+			stmt = (Statement) connection.createStatement();
+			String sql = "SELECT firstname, lastname, users_db.userid FROM users_db, "
+					+ "authentication_db WHERE authentication_db.fieldKey='"
+					+ username
+					+ "' and authentication_db.fieldPass='"
+					+ password
+					+ "' and authentication_db.userid=users_db.userid";
+			ResultSet rs = stmt.executeQuery(sql);
+			while (rs.next()) {
+				user.firstname = rs.getString("firstname");
+				user.lastname = rs.getString("lastname");
+				user.username = username;
+				user.id = rs.getInt("userid");
+
+				insert_record_terminalconnections_db(user.id, ServerInfo.id);
+
+				// Display values
+				System.out.println("Authorized : " + user.firstname + " "
+						+ user.lastname);
+			}
 		} catch (SQLException se) {
 			// Handle errors for JDBC
 			se.printStackTrace();

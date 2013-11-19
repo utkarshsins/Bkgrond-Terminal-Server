@@ -27,6 +27,8 @@ public class ServerInfo {
 
 	public AsyncXMLInputFactory xmlInputFactory;
 
+	public static int id;
+
 	public ServerInfo() {
 		this.listenerSocketMap = new ConcurrentHashMap<Integer, ListenerSocket>();
 		this.socketListenersMap = new ConcurrentHashMap<SocketChannel, ListenerSocket>();
@@ -95,6 +97,13 @@ public class ServerInfo {
 				+ ListenerSocket.THREAD_NAME);
 
 		return this;
+	}
+
+	public ServerInfo setID(int id) {
+
+		ServerInfo.id = id;
+		return this;
+
 	}
 
 }

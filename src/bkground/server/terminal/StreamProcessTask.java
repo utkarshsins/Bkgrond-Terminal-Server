@@ -6,6 +6,7 @@ import java.util.concurrent.Callable;
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
 
+import bkground.server.terminal.SocketInfo.User;
 import bkground.server.terminal.TerminalDataBase.STATE;
 import bkground.server.terminal.listeners.ExtractorThread;
 
@@ -27,15 +28,15 @@ public class StreamProcessTask implements Callable<Object> {
 		synchronized (socketInfo) {
 
 			while ((socketInfo.xmlStreamReader.next()) != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-				printEvent(socketInfo.xmlStreamReader);
+				// printEvent(socketInfo.xmlStreamReader);
 				processEvent(socketInfo);
-				
-				if(socketInfo.data != null)
-					if(socketInfo.data.isClosed()) {
-						System.out.println("Handle the created object");
+
+				if (socketInfo.data != null)
+					if (socketInfo.data.isClosed()) {
+						processData(socketInfo);
 						socketInfo.refreshReader();
 					}
-						
+
 			}
 
 		}
@@ -44,9 +45,23 @@ public class StreamProcessTask implements Callable<Object> {
 
 	}
 
-	private void processEvent(SocketInfo socketInfo) {
+	private void processData(SocketInfo socketInfo) {
 
-		ExtractorThread thread = (ExtractorThread) Thread.currentThread();
+		TerminalDataBase data = socketInfo.data.getChild(0);
+		if (data instanceof TerminalData.Authentication) {
+			try {
+				socketInfo.user = new User(
+						((ExtractorThread) Thread.currentThread()).mysqlConnector,
+						data.getChild(0).body, data.getChild(1).body);
+			} catch (Exception e) {
+				socketInfo.user = null;
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	private void processEvent(SocketInfo socketInfo) {
 
 		XMLStreamReader xmlr = socketInfo.xmlStreamReader;
 
@@ -274,6 +289,7 @@ public class StreamProcessTask implements Callable<Object> {
 
 	}
 
+	@SuppressWarnings("unused")
 	private static void printEvent(XMLStreamReader xmlr) {
 
 		System.out.print("EVENT:[" + xmlr.getLocation().getLineNumber() + "]["
