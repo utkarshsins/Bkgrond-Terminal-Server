@@ -27,45 +27,16 @@ public class StreamProcessTask implements Callable<Object> {
 		synchronized (socketInfo) {
 
 			while ((socketInfo.xmlStreamReader.next()) != AsyncXMLStreamReader.EVENT_INCOMPLETE) {
-				// System.out.print(socketInfo.xmlEventReader.nextEvent().getEventType()
-				// + " ");
-				// XMLEvent event = (XMLEvent) socketInfo.xmlEventReader.next();
 				printEvent(socketInfo.xmlStreamReader);
 				processEvent(socketInfo);
-				// System.out.println(event.getEventType());
-
-				// if (event.isStartDocument()) {
-				// System.out.println("Start document.");
-				// continue;
-				// StartElement startElement = event.asStartElement();
-				// If we have an item element, we create a new item
-				// if (startElement.getName().getLocalPart().equals(BKGROUND)) {
-				// socketInfo.data = new String();
-				// System.out.println("ok : " +
-				// socketInfo.xmlEventReader.nextEvent().asCharacters().getData());
-				// continue;
-				// } else {
-				// System.out.println("Something else.");
-				// }
-				// } else {
-				// System.out.println("Not start element.");
-				// }*/
-				/*
-				 * if (event.asStartElement().getName().getLocalPart()
-				 * .equals(BKGROUND)) { event = eventReader.nextEvent();
-				 * item.setUnit(event.asCharacters().getData()); continue; }
-				 * 
-				 * if (event.asStartElement().getName().getLocalPart()
-				 * .equals(CURRENT)) { event = eventReader.nextEvent();
-				 * item.setCurrent(event.asCharacters().getData()); continue; }
-				 * 
-				 * if (event.asStartElement().getName().getLocalPart()
-				 * .equals(INTERACTIVE)) { event = eventReader.nextEvent();
-				 * item.setInteractive(event.asCharacters().getData());
-				 * continue; } }
-				 */
+				
+				if(socketInfo.data != null)
+					if(socketInfo.data.isClosed()) {
+						System.out.println("Handle the created object");
+						socketInfo.refreshReader();
+					}
+						
 			}
-			System.out.println("Done processing.");
 
 		}
 
@@ -134,7 +105,7 @@ public class StreamProcessTask implements Callable<Object> {
 				// DEPTH-2
 				else {
 					TerminalDataBase terminalData2 = terminalData1.getChild(0);
-					if (terminalData2 instanceof TerminalData.Authentication)
+					if (terminalData2 instanceof TerminalData.Authentication) {
 						if (name.equals(TerminalData.USERNAME))
 							if (terminalData2.getChild(0) == null) {
 								terminalData2
@@ -143,17 +114,17 @@ public class StreamProcessTask implements Callable<Object> {
 								return;
 							} else
 								;
-						else if (name.equals(TerminalData.PASSWORD))
-							if (terminalData2.getChild(0) == null) {
+						else if (name.equals(TerminalData.PASSWORD)) {
+							if (terminalData2.getChild(1) == null) {
 								terminalData2
 										.addChild(new TerminalData.Authentication.Password(
 												socketInfo));
 								return;
 							} else
 								;
-						else
-							;
-					else if (terminalData2 instanceof TerminalData.Message)
+						}
+						;
+					} else if (terminalData2 instanceof TerminalData.Message)
 						if (name.equals(TerminalData.SUBSCRIPTIONID))
 							if (terminalData2.getChild(0) == null) {
 								terminalData2
@@ -163,7 +134,7 @@ public class StreamProcessTask implements Callable<Object> {
 							} else
 								;
 						else if (name.equals(TerminalData.MESSAGEBODY))
-							if (terminalData2.getChild(0) == null) {
+							if (terminalData2.getChild(1) == null) {
 								terminalData2
 										.addChild(new TerminalData.Message.MessageBody(
 												socketInfo));
@@ -192,11 +163,13 @@ public class StreamProcessTask implements Callable<Object> {
 				xmlr.getTextLength());
 
 		if (socketInfo.data != null) {
-			if ((socketInfo.data.state == STATE.USERNAME
-					|| socketInfo.data.state == STATE.PASSWORD
-					|| socketInfo.data.state == STATE.MESSAGEBODY || socketInfo.data.state == STATE.SUBSCRIPTIONID)
+			if ((socketInfo.data.state == STATE.USERNAME || socketInfo.data.state == STATE.SUBSCRIPTIONID)
 					&& socketInfo.data.getChild(0).getChild(0).open) {
 				socketInfo.data.getChild(0).getChild(0).body += data;
+				return;
+			} else if ((socketInfo.data.state == STATE.PASSWORD || socketInfo.data.state == STATE.MESSAGEBODY)
+					&& socketInfo.data.getChild(0).getChild(1).open) {
+				socketInfo.data.getChild(0).getChild(1).body += data;
 				return;
 			}
 
@@ -260,8 +233,8 @@ public class StreamProcessTask implements Callable<Object> {
 							else
 								;
 						else if (name.equals(TerminalData.PASSWORD))
-							if (terminalData2.getChild(0) instanceof TerminalData.Authentication.Password)
-								if (terminalData2.getChild(0).close())
+							if (terminalData2.getChild(1) instanceof TerminalData.Authentication.Password)
+								if (terminalData2.getChild(1).close())
 									return;
 								else
 									;
@@ -279,8 +252,8 @@ public class StreamProcessTask implements Callable<Object> {
 							else
 								;
 						else if (name.equals(TerminalData.MESSAGEBODY))
-							if (terminalData2.getChild(0) instanceof TerminalData.Message.MessageBody)
-								if (terminalData2.getChild(0).close())
+							if (terminalData2.getChild(1) instanceof TerminalData.Message.MessageBody)
+								if (terminalData2.getChild(1).close())
 									return;
 								else
 									;

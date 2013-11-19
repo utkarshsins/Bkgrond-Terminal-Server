@@ -10,19 +10,29 @@ public class SocketInfo {
 	public SelectionKey readKey;
 
 	public AsyncXMLStreamReader xmlStreamReader;
-	
+
 	public AsyncInputFeeder xmlFeeder;
-	
+
 	public TerminalData data;
-	
+
+	private ServerInfo serverInfo;
+
 	public SocketInfo(ServerInfo serverInfo) {
 
-		xmlStreamReader = serverInfo.xmlInputFactory
-				.createAsyncXMLStreamReader();
+		this.serverInfo = serverInfo;
 		
-		xmlFeeder = xmlStreamReader.getInputFeeder();
+		refreshReader();
+
+	}
+
+	public void refreshReader() {
 
 		data = null;
 		
+		xmlStreamReader = serverInfo.xmlInputFactory
+				.createAsyncXMLStreamReader();
+
+		xmlFeeder = xmlStreamReader.getInputFeeder();
+
 	}
 }
