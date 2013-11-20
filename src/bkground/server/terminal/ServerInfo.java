@@ -9,6 +9,7 @@ import java.util.concurrent.Executors;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
+import bkground.server.terminal.listeners.DataForwardingThreadFactory;
 import bkground.server.terminal.listeners.ExtractorThreadFactory;
 import bkground.server.terminal.listeners.ListenerServer;
 import bkground.server.terminal.listeners.ListenerSocket;
@@ -24,6 +25,8 @@ public class ServerInfo {
 	public ListenerServer listenerServer;
 
 	public ExecutorService streamProcessorPool;
+	
+	public ExecutorService dataForwardingPool;
 
 	public AsyncXMLInputFactory xmlInputFactory;
 
@@ -35,6 +38,7 @@ public class ServerInfo {
 		this.listenerServer = new ListenerServer(listenerSocketMap, this);
 		this.streamProcessorPool = Executors.newFixedThreadPool(5,
 				new ExtractorThreadFactory());
+		this.dataForwardingPool = Executors.newSingleThreadExecutor(new DataForwardingThreadFactory(this));
 		this.xmlInputFactory = new InputFactoryImpl();
 	}
 

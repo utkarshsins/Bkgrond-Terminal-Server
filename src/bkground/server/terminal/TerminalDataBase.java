@@ -60,7 +60,7 @@ public class TerminalDataBase {
 			return null;
 		}
 	}
-	
+
 	public void addChild(TerminalDataBase data) {
 		content.add(data);
 	}
