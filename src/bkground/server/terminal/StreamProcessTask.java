@@ -62,7 +62,7 @@ public class StreamProcessTask implements Callable<Object> {
 			}
 		} else if (data instanceof TerminalData.Message) {
 			try {
-				System.out.println("Sending data.. is a message");
+				System.out.println("Sending data.. is a message " + socketInfo.data.toString());
 				socketInfo.serverInfo.terminalServerSocket.write(ByteBuffer
 						.wrap(socketInfo.data.toString().getBytes()));
 			} catch (Exception e) {

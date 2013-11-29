@@ -63,7 +63,7 @@ public class StreamDataForwardingProcessTask implements Callable<Object> {
 			}
 		} else if (data instanceof TerminalData.MessageBack) {
 			try {
-				System.out.println("Sending data.. is a message back");
+				System.out.println("Sending data.. is a message back " + data.toString());
 				MessageBack backData = (MessageBack) data;
 
 				TerminalData sendData = new TerminalData();
