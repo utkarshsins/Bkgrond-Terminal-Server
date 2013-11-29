@@ -1,5 +1,9 @@
 package bkground.server.terminal;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
 public class TerminalData extends TerminalDataBase {
 
 	public STATE state;
@@ -33,9 +37,6 @@ public class TerminalData extends TerminalDataBase {
 			@Override
 			public String toString() {
 
-				if (open)
-					return null;
-
 				return "<username>" + body + "</username>";
 
 			}
@@ -50,9 +51,6 @@ public class TerminalData extends TerminalDataBase {
 			@Override
 			public String toString() {
 
-				if (open)
-					return null;
-
 				return "<password>" + body + "</password>";
 
 			}
@@ -60,9 +58,6 @@ public class TerminalData extends TerminalDataBase {
 
 		@Override
 		public String toString() {
-
-			if (open)
-				return null;
 
 			return "<authentication>" + getChild(0).toString()
 					+ getChild(1).toString() + "</authentication>";
@@ -73,6 +68,10 @@ public class TerminalData extends TerminalDataBase {
 
 	public static class Message extends TerminalDataBase {
 
+		public Message(SocketInfo socketInfo) {
+			socketInfo.data.state = STATE.MESSAGE;
+		}
+		
 		public static class SubscriptionID extends TerminalDataBase {
 			public SubscriptionID(SocketInfo socketInfo) {
 				body = new String();
@@ -81,9 +80,6 @@ public class TerminalData extends TerminalDataBase {
 
 			@Override
 			public String toString() {
-
-				if (open)
-					return null;
 
 				return "<subscriptionid>" + body + "</subscriptionid>";
 
@@ -99,9 +95,6 @@ public class TerminalData extends TerminalDataBase {
 			@Override
 			public String toString() {
 
-				if (open)
-					return null;
-
 				return "<messagebody>" + body + "</messagebody>";
 
 			}
@@ -110,21 +103,58 @@ public class TerminalData extends TerminalDataBase {
 		@Override
 		public String toString() {
 
-			if (open)
-				return null;
-
 			return "<message>" + getChild(0).toString()
 					+ getChild(1).toString() + "</message>";
 
 		}
 
 	}
+	
+	public static class MessageBack extends Message {
+		
+		public List<Integer> recipients;
+		
+		public MessageBack(SocketInfo socketInfo) {
+			super(socketInfo);
+			recipients = new ArrayList<Integer>();
+			socketInfo.data.state = STATE.MESSAGEBACK;
+		}
+		
+		public static class Recipients extends TerminalDataBase {
+			public Recipients(SocketInfo socketInfo) {
+				body = new String();
+				socketInfo.data.state = STATE.RECIPIENTS;
+			}
+			
+			public List<Integer> processRecipients() {
+				List<Integer> recipients = new ArrayList<Integer>();
+				
+				Scanner scan = new Scanner(body);
+				while(scan.hasNext()) {
+					recipients.add(scan.nextInt());
+				}
+				scan.close();
+				
+				return recipients;
+			}
+		}
+		
+		public void processRecipients() {
+			if(getChild(2) instanceof Recipients) {
+				Recipients recipientsChild = (Recipients) getChild(2);
+				recipients = recipientsChild.processRecipients();
+			}
+		}
+		
+		@Override
+		public boolean close() {
+			processRecipients();
+			return super.close();
+		}
+	}
 
 	@Override
 	public String toString() {
-
-		if (open)
-			return null;
 
 		return "<bkground>" + getChild(0).toString() + "</bkground>";
 

@@ -1,6 +1,8 @@
 package bkground.server.terminal;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.channels.SocketChannel;
 import java.util.Scanner;
 
 import bkground.server.terminal.listeners.ListenerAdministrator;
@@ -32,6 +34,7 @@ public class Controller implements Runnable {
 		initiatePort(scanner, serverInfo);
 		initiateThreadCount(scanner, serverInfo);
 		initiateID(scanner, serverInfo);
+		initiateDataForwardingConnection(scanner, serverInfo);
 
 		System.out.println();
 
@@ -95,9 +98,8 @@ public class Controller implements Runnable {
 	}
 
 	private void initiateID(Scanner scanner, ServerInfo serverInfo) {
-		System.out
-				.println("Enter terminal server id (default "
-						+ Defaults.getDefaultTerminalTerminalServerID() + ") : ");
+		System.out.println("Enter terminal server id (default "
+				+ Defaults.getDefaultTerminalTerminalServerID() + ") : ");
 		String input = scanner.nextLine();
 
 		try {
@@ -105,6 +107,29 @@ public class Controller implements Runnable {
 		} catch (NumberFormatException e) {
 		} catch (IllegalAccessException e) {
 			throw new IllegalStateException(e);
+		}
+	}
+
+	private void initiateDataForwardingConnection(Scanner scanner,
+			ServerInfo serverInfo) {
+		try {
+			System.out.println("Enter data-forwading server ip (default "
+					+ ServerInfo.DF_SERVER_DEFAULT_ADDRESS + ") : ");
+			String input = scanner.nextLine();
+			if (input.equals(""))
+				input = ServerInfo.DF_SERVER_DEFAULT_ADDRESS;
+
+			serverInfo.terminalServerSocket = SocketChannel.open();
+			serverInfo.terminalServerSocket.configureBlocking(true);
+			serverInfo.terminalServerSocket.connect(new InetSocketAddress(
+					ServerInfo.DF_SERVER_DEFAULT_ADDRESS,
+					ServerInfo.DF_SERVER_DEFAULT_PORT));
+			
+			serverInfo.terminalBackThread.enqueSocketChannel(serverInfo.terminalServerSocket);
+		} catch (IOException e) {
+			System.err.println("Unable to connect to Data Forwarding Server");
+			e.printStackTrace();
+			System.exit(-1);
 		}
 	}
 }

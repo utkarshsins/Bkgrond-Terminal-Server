@@ -111,10 +111,10 @@ public class ListenerServer extends Thread {
 
 					listenerIterator = (++listenerIterator)
 							% listenerSockets.values().size();
-					listenerSockets.get(listenerIterator).enqueSocketChannel(
-							socketChannel);
 					serverInfo.socketListenersMap.put(socketChannel,
 							listenerSockets.get(listenerIterator));
+					listenerSockets.get(listenerIterator).enqueSocketChannel(
+							socketChannel);
 
 				} else {
 

@@ -15,7 +15,7 @@ public class SocketInfo {
 
 	public TerminalData data;
 
-	private ServerInfo serverInfo;
+	public ServerInfo serverInfo;
 
 	public User user;
 

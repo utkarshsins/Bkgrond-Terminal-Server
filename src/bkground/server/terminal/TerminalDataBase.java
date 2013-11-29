@@ -16,8 +16,11 @@ public class TerminalDataBase {
 	public static final String SUBSCRIPTIONID = "subscriptionid";
 	public static final String MESSAGEBODY = "messagebody";
 
+	public static final String MESSAGEBACK = "messageback";
+	public static final String RECIPIENTS = "recipients";
+
 	public static enum STATE {
-		NULL, BKGROUND, AUTHENTICATION, LOGIN, USERNAME, PASSWORD, MESSAGE, SUBSCRIPTIONID, MESSAGEBODY
+		NULL, BKGROUND, AUTHENTICATION, LOGIN, USERNAME, PASSWORD, MESSAGE, SUBSCRIPTIONID, MESSAGEBODY, MESSAGEBACK, RECIPIENTS
 	};
 
 	public List<TerminalDataBase> content;

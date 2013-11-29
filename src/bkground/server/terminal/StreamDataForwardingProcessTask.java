@@ -2,22 +2,25 @@ package bkground.server.terminal;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.SocketChannel;
 import java.util.concurrent.Callable;
 
 import javax.xml.stream.XMLStreamConstants;
 import javax.xml.stream.XMLStreamReader;
 
 import bkground.server.terminal.SocketInfo.User;
+import bkground.server.terminal.TerminalData.Message;
+import bkground.server.terminal.TerminalData.MessageBack;
 import bkground.server.terminal.TerminalDataBase.STATE;
 import bkground.server.terminal.listeners.ExtractorThread;
 
 import com.fasterxml.aalto.AsyncXMLStreamReader;
 
-public class StreamProcessTask implements Callable<Object> {
+public class StreamDataForwardingProcessTask implements Callable<Object> {
 
 	SelectionKey key;
 
-	public StreamProcessTask(SelectionKey streamKey) {
+	public StreamDataForwardingProcessTask(SelectionKey streamKey) {
 		this.key = streamKey;
 	}
 
@@ -54,15 +57,41 @@ public class StreamProcessTask implements Callable<Object> {
 				socketInfo.user = new User(
 						((ExtractorThread) Thread.currentThread()).mysqlConnector,
 						data.getChild(0).body, data.getChild(1).body);
-				socketInfo.serverInfo.userSocketInfoMap.put(socketInfo.user.id,
-						socketInfo);
+			} catch (Exception e) {
+				socketInfo.user = null;
+				e.printStackTrace();
+			}
+		} else if (data instanceof TerminalData.MessageBack) {
+			try {
+				System.out.println("Sending data.. is a message back");
+				MessageBack backData = (MessageBack) data;
+
+				TerminalData sendData = new TerminalData();
+				sendData.addChild(new Message(socketInfo));
+				sendData.getChild(0).addChild(
+						new Message.SubscriptionID(socketInfo));
+				sendData.getChild(0).getChild(0).body = backData.getChild(0).body;
+				sendData.getChild(0).addChild(
+						new Message.MessageBody(socketInfo));
+				sendData.getChild(0).getChild(1).body = backData.getChild(1).body;
+				String sendString = sendData.toString();
+
+				for (int i : backData.recipients) {
+					SocketInfo userSocketInfo = socketInfo.serverInfo.userSocketInfoMap
+							.get(i);
+					if (userSocketInfo != null) {
+						SocketChannel userSocketChannel = (SocketChannel) userSocketInfo.readKey
+								.channel();
+						userSocketChannel.write(ByteBuffer.wrap(sendString
+								.getBytes()));
+					}
+				}
 			} catch (Exception e) {
 				socketInfo.user = null;
 				e.printStackTrace();
 			}
 		} else if (data instanceof TerminalData.Message) {
 			try {
-				System.out.println("Sending data.. is a message");
 				socketInfo.serverInfo.terminalServerSocket.write(ByteBuffer
 						.wrap(socketInfo.data.toString().getBytes()));
 			} catch (Exception e) {
@@ -126,6 +155,13 @@ public class StreamProcessTask implements Callable<Object> {
 						return;
 					} else
 						;
+				else if (name.equals(TerminalData.MESSAGEBACK))
+					if (terminalData1.getChild(0) == null) {
+						terminalData1.addChild(new TerminalData.MessageBack(
+								socketInfo));
+						return;
+					} else
+						;
 				// DEPTH-1 done. Now DEPTH-1 object should not be null.
 				else if (terminalData1.getChild(0) == null)
 					;
@@ -152,6 +188,32 @@ public class StreamProcessTask implements Callable<Object> {
 								;
 						}
 						;
+					} else if (terminalData2 instanceof TerminalData.MessageBack) {
+						if (name.equals(TerminalData.RECIPIENTS))
+							if (terminalData2.getChild(2) == null) {
+								terminalData2
+										.addChild(new TerminalData.MessageBack.Recipients(
+												socketInfo));
+								return;
+							}
+						if (name.equals(TerminalData.SUBSCRIPTIONID))
+							if (terminalData2.getChild(0) == null) {
+								terminalData2
+										.addChild(new TerminalData.Message.SubscriptionID(
+												socketInfo));
+								return;
+							} else
+								;
+						else if (name.equals(TerminalData.MESSAGEBODY))
+							if (terminalData2.getChild(1) == null) {
+								terminalData2
+										.addChild(new TerminalData.Message.MessageBody(
+												socketInfo));
+								return;
+							} else
+								;
+						else
+							;
 					} else if (terminalData2 instanceof TerminalData.Message)
 						if (name.equals(TerminalData.SUBSCRIPTIONID))
 							if (terminalData2.getChild(0) == null) {
@@ -186,7 +248,6 @@ public class StreamProcessTask implements Callable<Object> {
 	private void processElementCharacters(SocketInfo socketInfo) {
 
 		XMLStreamReader xmlr = socketInfo.xmlStreamReader;
-
 		String data = new String(xmlr.getTextCharacters(), xmlr.getTextStart(),
 				xmlr.getTextLength());
 
@@ -198,6 +259,10 @@ public class StreamProcessTask implements Callable<Object> {
 			} else if ((socketInfo.data.state == STATE.PASSWORD || socketInfo.data.state == STATE.MESSAGEBODY)
 					&& socketInfo.data.getChild(0).getChild(1).open) {
 				socketInfo.data.getChild(0).getChild(1).body += data;
+				return;
+			} else if ((socketInfo.data.state == STATE.RECIPIENTS)
+					&& socketInfo.data.getChild(0).getChild(2).open) {
+				socketInfo.data.getChild(0).getChild(2).body += data;
 				return;
 			}
 
@@ -245,6 +310,14 @@ public class StreamProcessTask implements Callable<Object> {
 							;
 					else
 						;
+				else if (name.equals(TerminalData.MESSAGEBACK))
+					if (terminalData1.getChild(0) instanceof TerminalData.MessageBack)
+						if (terminalData1.getChild(0).close())
+							return;
+						else
+							;
+					else
+						;
 				// DEPTH-1 done. Now DEPTH-1 object should not be null.
 				else if (terminalData1.getChild(0) == null)
 					;
@@ -262,6 +335,33 @@ public class StreamProcessTask implements Callable<Object> {
 								;
 						else if (name.equals(TerminalData.PASSWORD))
 							if (terminalData2.getChild(1) instanceof TerminalData.Authentication.Password)
+								if (terminalData2.getChild(1).close())
+									return;
+								else
+									;
+							else
+								;
+						else
+							;
+					else if (terminalData2 instanceof TerminalData.MessageBack)
+						if (name.equals(TerminalData.RECIPIENTS))
+							if (terminalData2.getChild(2) instanceof TerminalData.MessageBack.Recipients)
+								if (terminalData2.getChild(2).close())
+									return;
+								else
+									;
+							else
+								;
+						else if (name.equals(TerminalData.SUBSCRIPTIONID))
+							if (terminalData2.getChild(0) instanceof TerminalData.MessageBack.SubscriptionID)
+								if (terminalData2.getChild(0).close())
+									return;
+								else
+									;
+							else
+								;
+						else if (name.equals(TerminalData.MESSAGEBODY))
+							if (terminalData2.getChild(1) instanceof TerminalData.MessageBack.MessageBody)
 								if (terminalData2.getChild(1).close())
 									return;
 								else

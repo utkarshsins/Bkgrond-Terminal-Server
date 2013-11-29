@@ -1,6 +1,7 @@
 package bkground.server.terminal;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -9,6 +10,7 @@ import java.util.concurrent.Executors;
 import com.fasterxml.aalto.AsyncXMLInputFactory;
 import com.fasterxml.aalto.stax.InputFactoryImpl;
 
+import bkground.server.terminal.listeners.DataForwardingBackThread;
 import bkground.server.terminal.listeners.DataForwardingThreadFactory;
 import bkground.server.terminal.listeners.ExtractorThreadFactory;
 import bkground.server.terminal.listeners.ListenerServer;
@@ -18,28 +20,45 @@ public class ServerInfo {
 
 	public static final int SERVER_INFO_DEFAULT_PORT = 4040;
 
+	public static final String DF_SERVER_DEFAULT_ADDRESS = "127.0.0.1";
+
+	public static final int DF_SERVER_DEFAULT_PORT = 4041;
+
 	public ConcurrentHashMap<Integer, ListenerSocket> listenerSocketMap;
 
 	public ConcurrentHashMap<SocketChannel, ListenerSocket> socketListenersMap;
+	
+	public ConcurrentHashMap<Integer, SocketInfo> userSocketInfoMap; 
 
 	public ListenerServer listenerServer;
 
 	public ExecutorService streamProcessorPool;
-	
+
 	public ExecutorService dataForwardingPool;
 
 	public AsyncXMLInputFactory xmlInputFactory;
 
 	public static int id;
 
-	public ServerInfo() {
+	public SocketChannel terminalServerSocket;
+
+	public DataForwardingBackThread terminalBackThread;
+
+	public ServerInfo() throws IOException {
 		this.listenerSocketMap = new ConcurrentHashMap<Integer, ListenerSocket>();
 		this.socketListenersMap = new ConcurrentHashMap<SocketChannel, ListenerSocket>();
+		this.userSocketInfoMap = new ConcurrentHashMap<Integer, SocketInfo>();
 		this.listenerServer = new ListenerServer(listenerSocketMap, this);
 		this.streamProcessorPool = Executors.newFixedThreadPool(5,
 				new ExtractorThreadFactory());
-		this.dataForwardingPool = Executors.newSingleThreadExecutor(new DataForwardingThreadFactory(this));
+		DataForwardingThreadFactory threadFactory = new DataForwardingThreadFactory(
+				this);
+		this.dataForwardingPool = Executors
+				.newSingleThreadExecutor(threadFactory);
+		this.terminalBackThread = new DataForwardingBackThread(this, 0);
+		this.terminalBackThread.start();
 		this.xmlInputFactory = new InputFactoryImpl();
+		this.terminalServerSocket = null;
 	}
 
 	public void init() throws IOException {
